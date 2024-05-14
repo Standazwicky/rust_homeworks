@@ -4,6 +4,8 @@ use slug::slugify;
 use std::env;
 use std::io;
 use std::error::Error;
+//use std::{error::Error, io};
+// mod csv_mod;
 
 fn main() {
     let arg = env::args().nth(1);
@@ -15,14 +17,19 @@ fn main() {
          Some(argument) if argument == "slugify" => my_slugify(&argument),
          Some(argument) if argument == "camelcase" => camelcase(&argument),
          Some(argument) if argument == "snakecase" => snakecase(&argument),
-      //   Some (argument) if argument == "csv" => csv(&argument)
-        Some(argument) => Err(Box::from(format!("{} is not correct input argument",argument))),
-        None => Err(Box::from("There was no input argument.")),
+         Some (argument) if argument == "csv" => csv(&argument),
+         Some(argument) => Err(Box::from(format!("{} is not correct input argument",argument))),
+         None => Err(Box::from(format!("There was no input argument."))),
     };
+    
     
     match outtext {
      Err(result) => { 
+        if arg.is_some() {
          eprintln!("In method {} occured following error: {}",arg.unwrap(),result)
+        } else {
+         eprintln!("{}",result)
+        }
      },
      Ok(result) => {
       println!("{}",result)
@@ -31,11 +38,33 @@ fn main() {
     
 }
 
-/*
+
 fn csv(argm:&String) -> Result<String, Box<dyn Error>> {
- Ok("Bla".to_string())   
+ if argm != "csv" {
+        Err(Box::from( format!("csv function was called, meanwile argument is {}",argm) ))
+      } else {   
+    
+ let mut rdr = csv::Reader::from_reader(io::stdin());
+ 
+    
+   let record = rdr.headers()?;  
+   for element in record.iter() {  
+    print!("{:16}",element);   
+   }
+   print!("\n");
+ 
+ for result in rdr.records() {
+  let record = result?;
+   for element in record.iter() {
+     print!("{:16}",element);
+   }
+   print!("\n")
+ }
+ Ok(" ".to_string())   
+          
+    }
 }
-*/
+
 
 fn lowercase(argm:&String) -> Result<String, Box<dyn Error>> {
       if argm != "lowercase" {
