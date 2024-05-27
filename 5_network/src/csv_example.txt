@@ -1,0 +1,6 @@
+Language,Paradigm,Year,Creator,Rust_Inspiration
+C,Imperative,1972,Dennis Ritchie,Medium
+Java,Object-Oriented,1995,James Gosling,Low
+Python,Multi-Paradigm,1991,Guido van Rossum,Medium
+Rust,Multi-Paradigm,2010,Graydon Hoare,High
+Haskell,Functional,1990,Lennart Augustsson,Medium 
