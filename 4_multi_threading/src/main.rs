@@ -161,7 +161,6 @@ fn main() {
                     &parsed_command.argument,
                 ),
                 Command::Csv => {
-                    println!("bla {}", parsed_command.argument);
                     csv(
                         &parsed_command.command.to_string(),
                         &parsed_command.argument,
