@@ -45,7 +45,6 @@ fn csv(argm:&String) -> Result<String, Box<dyn Error>> {
       } else {   
     
  let mut rdr = csv::Reader::from_reader(io::stdin());
- 
     
    let record = rdr.headers()?;  
    for element in record.iter() {  
