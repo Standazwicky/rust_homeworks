@@ -4,7 +4,10 @@ use std::env;
 use std::fs::File;
 use std::path::Path;
 use shared::{MessageType, serialize_message};
+use tracing_subscriber;
 
+
+// Function to send a message to the server
 fn send_message(
     mut stream: &TcpStream,
     message: &MessageType,
@@ -20,6 +23,7 @@ fn send_message(
     Ok(())
 }
 
+// Function to start the client and connect to the server
 fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
     let stream = TcpStream::connect(address)?;
     println!("Connected to server at {}", address);
@@ -31,6 +35,7 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to read line");
         let input = input.trim();
 
+        // Check if the input starts with specific commands
         if input.starts_with(".file") {
             let path = &input[6..];
             if let Ok(mut file) = File::open(&Path::new(path)) {
@@ -70,6 +75,9 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
+ // Initialize the tracing subscriber for logging   
+ tracing_subscriber::fmt::init();   
+    
  let args: Vec<String> = env::args().collect();
  
  let address = if args.len() < 2 {

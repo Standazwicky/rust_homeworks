@@ -9,8 +9,7 @@ use std::env;
 use chrono::Utc;
 use shared::{MessageType, deserialize_message}; 
 
-
-
+// Function to handle incoming client connections
 pub fn handle_client(mut stream: TcpStream) -> Result<MessageType, Box<dyn std::error::Error>> {
     let mut len_bytes = [0u8; 4];
     stream.read_exact(&mut len_bytes)?;
@@ -23,6 +22,7 @@ pub fn handle_client(mut stream: TcpStream) -> Result<MessageType, Box<dyn std::
     Ok(message)
 }
 
+// Function to handle different types of messages from clients
 pub fn handle_message(
     addr: SocketAddr,
     message: MessageType,
@@ -54,6 +54,7 @@ pub fn handle_message(
     Ok(false)
 }
 
+// Function to start the server and listen for incoming connections
 pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
     let listener = TcpListener::bind(address)?;
     println!("Server running on {}", address);
@@ -100,6 +101,7 @@ pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+// Function to ensure that necessary directories exist
 fn ensure_directories_exist() -> Result<(), Box<dyn std::error::Error>> {
     let paths = ["images", "files"];
     for path in &paths {
@@ -111,6 +113,9 @@ fn ensure_directories_exist() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
+ // Initialize the tracing subscriber for logging   
+ tracing_subscriber::fmt::init();   
+    
  let args: Vec<String> = env::args().collect();
  
  let address = if args.len() < 2 {

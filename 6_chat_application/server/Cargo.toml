@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 shared = { path = "../shared" }
 chrono = "0.4"
+tracing-subscriber = "0.2"
