@@ -1,15 +1,15 @@
+use chrono::Utc;
+use shared::{deserialize_message, MessageType};
 use std::collections::HashMap;
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::env;
+use std::fs;
 use std::io::Read;
+use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::fs;
-use std::path::Path;
-use std::env;
-use chrono::Utc;
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber;
-use shared::{MessageType, deserialize_message}; 
 
 // Function to handle incoming client connections
 pub fn handle_client(mut stream: TcpStream) -> Result<MessageType, Box<dyn std::error::Error>> {
@@ -115,22 +115,22 @@ fn ensure_directories_exist() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
- // Initialize the tracing subscriber for logging   
- tracing_subscriber::fmt()
-   .with_max_level(tracing::Level::INFO)
-   .init();  
-    
- let args: Vec<String> = env::args().collect();
- 
- let address = if args.len() < 2 {
-     println!("Usage: {} <address>", args[0]);
-     println!("Setting default: localhost:11111");
-     "localhost:11111"   
+    // Initialize the tracing subscriber for logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    let args: Vec<String> = env::args().collect();
+
+    let address = if args.len() < 2 {
+        println!("Usage: {} <address>", args[0]);
+        println!("Setting default: localhost:11111");
+        "localhost:11111"
     } else {
-     &args[1]
+        &args[1]
     };
-    
+
     if let Err(e) = listen_and_accept(address) {
-     error!("Error: {}",e);   
-    }   
+        error!("Error: {}", e);
+    }
 }

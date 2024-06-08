@@ -1,12 +1,11 @@
-use std::io::{self, Read, Write};
-use std::net::TcpStream;
+use shared::{serialize_message, MessageType};
 use std::env;
 use std::fs::File;
+use std::io::{self, Read, Write};
+use std::net::TcpStream;
 use std::path::Path;
-use shared::{MessageType, serialize_message};
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber;
-
 
 // Function to send a message to the server
 fn send_message(
@@ -76,22 +75,22 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
- // Initialize the tracing subscriber for logging   
- tracing_subscriber::fmt()
-   .with_max_level(tracing::Level::INFO)
-   .init();   
-    
- let args: Vec<String> = env::args().collect();
- 
- let address = if args.len() < 2 {
-     println!("Usage: {} <address>", args[0]);
-     println!("Setting default: localhost:1111");
-     "localhost:11111"   
+    // Initialize the tracing subscriber for logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    let args: Vec<String> = env::args().collect();
+
+    let address = if args.len() < 2 {
+        println!("Usage: {} <address>", args[0]);
+        println!("Setting default: localhost:1111");
+        "localhost:11111"
     } else {
-     &args[1]
+        &args[1]
     };
-    
+
     if let Err(e) = start_client(address) {
-     error!("Error: {}",e);   
+        error!("Error: {}", e);
     }
 }
