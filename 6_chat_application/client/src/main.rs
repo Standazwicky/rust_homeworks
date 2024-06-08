@@ -77,7 +77,9 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 fn main() {
  // Initialize the tracing subscriber for logging   
- tracing_subscriber::fmt::init();   
+ tracing_subscriber::fmt()
+   .with_max_level(tracing::Level::INFO)
+   .init();   
     
  let args: Vec<String> = env::args().collect();
  
