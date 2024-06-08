@@ -4,6 +4,7 @@ use std::env;
 use std::fs::File;
 use std::path::Path;
 use shared::{MessageType, serialize_message};
+use tracing::{info, error};
 use tracing_subscriber;
 
 
@@ -26,7 +27,7 @@ fn send_message(
 // Function to start the client and connect to the server
 fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
     let stream = TcpStream::connect(address)?;
-    println!("Connected to server at {}", address);
+    info!("Connected to server at {}", address);
 
     loop {
         let mut input = String::new();
@@ -50,7 +51,7 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
                 let message = MessageType::File(filename, buffer);
                 send_message(&stream, &message)?;
             } else {
-                eprintln!("Failed to open file {}", path);
+                error!("Failed to open file {}", path);
             }
         } else if input.starts_with(".image ") {
             let path = &input[7..];
@@ -60,7 +61,7 @@ fn start_client(address: &str) -> Result<(), Box<dyn std::error::Error>> {
                 let message = MessageType::Image(buffer);
                 send_message(&stream, &message)?;
             } else {
-                eprintln!("Failed to open image {}", path);
+                error!("Failed to open image {}", path);
             }
         } else if input == ".quit" {
             let message = MessageType::Quit;
@@ -81,12 +82,14 @@ fn main() {
  let args: Vec<String> = env::args().collect();
  
  let address = if args.len() < 2 {
+     println!("Usage: {} <address>", args[0]);
+     println!("Setting default: localhost:1111");
      "localhost:11111"   
     } else {
      &args[1]
     };
     
     if let Err(e) = start_client(address) {
-     eprintln!("Error: {}",e);   
+     error!("Error: {}",e);   
     }
 }

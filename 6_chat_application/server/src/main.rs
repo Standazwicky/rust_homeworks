@@ -7,6 +7,8 @@ use std::fs;
 use std::path::Path;
 use std::env;
 use chrono::Utc;
+use tracing::{info, error};
+use tracing_subscriber;
 use shared::{MessageType, deserialize_message}; 
 
 // Function to handle incoming client connections
@@ -29,26 +31,26 @@ pub fn handle_message(
 ) -> Result<bool, Box<dyn std::error::Error>> {
     match message {
         MessageType::Quit => {
-            println!("Client {} sent quit message", addr);
+            info!("Client {} sent quit message", addr);
             return Ok(true);
         }
         MessageType::Text(text) => {
-            println!("Text message from {}: {}", addr, text);
+            info!("Text message from {}: {}", addr, text);
         }
         MessageType::Image(data) => {
             ensure_directories_exist()?;
-            println!("Receiving image from {}...", addr);
+            info!("Receiving image from {}...", addr);
             let timestamp = Utc::now().timestamp();
             let filename = format!("images/{}.png", timestamp);
             fs::write(&filename, &data)?;
-            println!("Saved image to {}", filename);
+            info!("Saved image to {}", filename);
         }
         MessageType::File(name, data) => {
             ensure_directories_exist()?;
-            println!("Receiving file '{}' from {}...", name, addr);
+            info!("Receiving file '{}' from {}...", name, addr);
             let filename = format!("files/{}", name);
             fs::write(&filename, &data)?;
-            println!("Saved file to {}", filename);
+            info!("Saved file to {}", filename);
         }
     }
     Ok(false)
@@ -57,7 +59,7 @@ pub fn handle_message(
 // Function to start the server and listen for incoming connections
 pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
     let listener = TcpListener::bind(address)?;
-    println!("Server running on {}", address);
+    info!("Server running on {}", address);
 
     let clients: Arc<Mutex<HashMap<SocketAddr, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
 
@@ -83,12 +85,12 @@ pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
                                 // Continue to handle other messages
                             }
                             Err(e) => {
-                                println!("Error handling message from {}: {}", addr, e);
+                                error!("Error handling message from {}: {}", addr, e);
                             }
                         }
                     }
                     Err(e) => {
-                        println!("Error handling client {}: {}", addr, e);
+                        error!("Error handling client {}: {}", addr, e);
                         break;
                     }
                 }
@@ -119,12 +121,14 @@ fn main() {
  let args: Vec<String> = env::args().collect();
  
  let address = if args.len() < 2 {
+     println!("Usage: {} <address>", args[0]);
+     println!("Setting default: localhost:11111");
      "localhost:11111"   
     } else {
      &args[1]
     };
     
     if let Err(e) = listen_and_accept(address) {
-     eprintln!("Error: {}",e);   
+     error!("Error: {}",e);   
     }   
 }
