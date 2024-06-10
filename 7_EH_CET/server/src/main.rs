@@ -1,9 +1,9 @@
 use chrono::Utc;
-use shared::{deserialize_message, MessageType};
+use shared::{deserialize_message, serialize_message, MessageType};
 use std::collections::HashMap;
 use std::env;
-use std::fs;
-use std::io::Read;
+use std::fs::{self, File};
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -11,6 +11,7 @@ use std::thread;
 use tracing::{error, info};
 use tracing_subscriber;
 use anyhow::{Context, Result};
+use image::ImageFormat;
 
 // Function to handle incoming client connections
 pub fn handle_client(mut stream: TcpStream) -> Result<MessageType> {
@@ -42,7 +43,12 @@ pub fn handle_message(
             info!("Receiving image from {}...", addr);
             let timestamp = Utc::now().timestamp();
             let filename = format!("images/{}.png", timestamp);
-            fs::write(&filename, &data).context("Failed to save image")?;
+            
+            // Convert image to PNG format
+            let image = image::load_from_memory(&data).context("Failed to load image from memory")?;
+            let mut output_file = File::create(&filename).context("Failed to create image file")?;
+            image.write_to(&mut output_file, ImageFormat::Png).context("Failed to write image as PNG")?;
+            
             info!("Saved image to {}", filename);
         }
         MessageType::File(name, data) => {
@@ -52,9 +58,22 @@ pub fn handle_message(
             fs::write(&filename, &data).context("Failed to save file")?;
             info!("Saved file to {}", filename);
         }
+        MessageType::Error(err) => {
+         error!("Error from {}: {}", addr, err);   
+        }
     }
     Ok(false)
 }
+
+fn report_error(mut stream: TcpStream, error_message: &str) -> Result<()> {
+ let error_message=MessageType::Error(error_message.to_string());
+ let serialized = serialize_message(&error_message)?;
+ let len = serialized.len() as u32;
+ stream.write(&len.to_be_bytes()).context("Failed to send error length")?;
+ stream.write_all(&serialized).context("Failed to send error message")?;
+ Ok(())
+}
+
 
 // Function to start the server and listen for incoming connections
 pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
@@ -86,11 +105,17 @@ pub fn listen_and_accept(address: &str) -> std::io::Result<()> {
                             }
                             Err(e) => {
                                 error!("Error handling message from {}: {:?}", addr, e);
+                                if let Err(report_err) = report_error(stream.try_clone().unwrap(), &e.to_string()) {
+                                    error!("Failed to report error to client {}: {:?}", addr, report_err)
+                                }
                             }
                         }
                     }
                     Err(e) => {
                         error!("Error handling client {}: {:?}", addr, e);
+                        if let Err(report_err) = report_error(stream.try_clone().unwrap(), &e.to_string()) {
+                                    error!("Failed to report error to client {}: {:?}", addr, report_err)
+                                }
                         break;
                     }
                 }

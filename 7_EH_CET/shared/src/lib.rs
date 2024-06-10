@@ -11,6 +11,7 @@ pub enum MessageType {
     Image(Vec<u8>),
     File(String, Vec<u8>),
     Quit,
+    Error(String),
 }
 
 // Function to serialize a message
