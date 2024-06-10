@@ -31,6 +31,9 @@ This project implements a chat application with a client-server architecture. Th
 ## How to Run
 
 1. Clone the repository
+    ```sh
+    git clone <repository_url>
+    ```
 2. Build the project
     ```sh 
     cargo build
