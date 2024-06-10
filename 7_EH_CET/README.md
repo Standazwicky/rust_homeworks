@@ -99,4 +99,4 @@ The client can send different types of messages to the server. Here are the avai
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License.
