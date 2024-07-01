@@ -1,15 +1,17 @@
-# Chat Application
+# Asynchronous Chat Application with database Integration
 
 ## Overview
 
-This project implements a chat application with a client-server architecture. The server can handle multiple clients, receive text messages, files and images, convert images to PNG format, and save them. The application includes robust error handling using the `anyhow` and `thiserror` crates.
+This project is an asynchronous chat application built using Rust and Tokio, with a PostgreSQL database for storing user data and chat messages. The application supports user registration, login, and message exchange, including text, images, and files.
 
 ## Features
 
 - Clients cand send text messages, files, and images.
-- The server converts received images to PNG format before saving them.
 - Robust error handling and logging using `anyhow` and `thiserror`.
 - Clients receive acknowladgments and error messages from the server.
+- Asynchronous I/O operations using Tokio
+- User registration and login
+- Persistent storage of user data and messages in a PostgreSQL database
 
 ## Dependencies
 
@@ -21,12 +23,119 @@ This project implements a chat application with a client-server architecture. Th
 - `tracing-subscriber`
 - `serde`
 - `serde_cbor`
+- `sqlx`
+- `dotenv`
 
 ## Project Structure
 
 - `client/`: The client application
 - `server/`: The server application
 - `shared/`: The shared library with common functionality
+
+## Setup
+
+### 1. Install Rust and Cargo
+
+Follow the instructions on the [Rust website](https://www.rust-lang.org/tools/install) to install Rust and Cargo.
+
+### 2. Install PostgreSQL
+
+#### On Ubuntu:
+
+```sh
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+```
+
+#### On MacOS(using Homebrew):
+
+```sh
+ brew install postgresql
+```
+
+### 3. Set Up PostgreSQL
+
+ Start the PostgreSQL service:
+ 
+#### On Ubuntu:
+
+```sh
+ sudo service postgresql start
+```
+
+#### On MacOS:
+
+```sh
+ brew services start posgresql
+```
+
+Vreate a new PostgreSQL user and database:
+
+```sh
+ sudo -u postgres createuser chat_user
+ sudo -u postgres ctreatedb chat_app
+```
+
+Set a password for the new PostgreSQL user:
+
+```sh
+ sudo -u postgres psql
+ \password chat_user
+```
+
+Edit the `pg_hba.conf` file to use MD5 authentication:
+
+```sh
+# Open the pg_hba.conf file
+sudo nano /etc/postgresql/12/main/pg_hba.conf
+
+# Change this line
+local   all             all                                     peer
+
+# To this line
+local   all             all                                     md5
+```
+
+Reload PostgreSQL configuration:
+
+```sh
+ sudo service postgresql restart
+```
+
+### 4.Create Tables
+
+ Connect to the `chat_app` database and create the necessary tables:
+ 
+ ```sh
+  sudo -u postgres psql -d chat_app
+ ```
+
+ Create the `users` and `messages` tables:
+ 
+ ```sql
+  CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL
+  );
+
+  CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    content TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+ ```
+ 
+ ### 5.Environment Variables
+ 
+ Create a `.env` file in the root of the project and add your database URL:
+ 
+ ```dotenv
+  DATABASE_URL=postgres:://chat_user:your_password@localhost/chat_app
+ ```
+ 
+ Replace `your_password` with the password you set for the `chat_user` PostgreSQL user.
+
 
 ## How to Run
 
@@ -50,6 +159,16 @@ This project implements a chat application with a client-server architecture. Th
 ## Client Usage
 
 The client can send different types of messages to the server. Here are the available commands:
+
+- **Register a New User:**Use the `.register <username>` command to register a new user.
+```sh
+ .register new_user
+```
+
+- **Login:** Use the `.login <username>` command to login with an existing user.
+```sh
+ .login existing_user
+```
 
 - **Text Message**: Any text that does not start with a command will be sent as a text message.
     ```sh 
@@ -80,19 +199,27 @@ The client can send different types of messages to the server. Here are the avai
     ```sh
     cargo run --bin client
     ```
-3. Send a text message:
+3. Register a new user:
+    ```sh
+    .register new_user
+    ```
+4. Login:
+    ```sh
+    .login existing_user
+    ```
+5. Send a text message:
     ```sh
     Hello, Server!
     ```
-4. Send a file:
+6. Send a file:
     ```sh
     .file /path/to/your/file.txt
     ```
-5. Send an image:
+7. Send an image:
     ```sh
     .image /path/to/your/image.png
     ```
-6. Quit the client:
+8. Quit the client:
     ```sh
     .quit
     ```

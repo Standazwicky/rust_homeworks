@@ -22,12 +22,12 @@ async fn main() {
 
     let address = if args.len() < 2 {
         println!("Usage: {} <address>", args[0]);
-        println!("Setting default: localhost:1111");
+        println!("Setting default: localhost:11111");
         "localhost:11111"
     } else {
         &args[1]
     };
-
+    
     if let Err(e) = start_client(address).await {
         error!("Error: {}", e);
     }
@@ -38,30 +38,41 @@ async fn main() {
 async fn start_client(address: &str) -> Result<()> {
     let stream = TcpStream::connect(address).await.context("Failed to connect to server")?;
     info!("Connected to server at {}", address);
+    info!("For login use: \n 
+    .login <user> \n 
+    For registration use: \n 
+    .register <user> \n
+    To exit the client use: \n
+    .quit");
     
     let (reader, writer) = stream.into_split();
     let reader = Arc::new(Mutex::new(reader));
     let writer = Arc::new(Mutex::new(writer));
     
     let (tx, mut rx) = mpsc::channel::<MessageType>(100);
+    let (quit_tx, mut quit_rx) = mpsc::channel::<()>(1);
     
-    // Task for handling server responses
+    
+    // Task for handling server responses 
     let reader_clone = Arc::clone(&reader);
-    task::spawn(async move {
-        if let Err(e) = handle_server_response(reader_clone, tx).await {
+    let tx_clone = tx.clone();
+    let quit_tx_clone = quit_tx.clone();
+    let server_response_handle = task::spawn(async move {
+        if let Err(e) = handle_server_response(reader_clone, tx_clone, quit_tx_clone).await {
             error!("Error handling server response: {}",e);
         }
     });
     
     // Task for handling user input
     let writer_clone = Arc::clone(&writer);
-    task::spawn(async move { 
-        if let Err(e) = handle_user_input(writer_clone).await {
+    let user_input_handle = task::spawn(async move { 
+        if let Err(e) = handle_user_input(writer_clone, tx).await {
             error!("Error handling user input: {}", e);
         }
     });
     
     // Main task to handle incoming messages
+  let incoming_handle = task::spawn(async move {  
     while let Some(message) = rx.recv().await {
         match message {
             MessageType::Error(err) => {
@@ -70,34 +81,54 @@ async fn start_client(address: &str) -> Result<()> {
             MessageType::Text(text) => {
                 info!("Server response: {}",text);
             }
+            MessageType::Quit => {
+                info!("Server has closed the connection.");
+                break;
+            }
             _ => {
              info!("Received unexpected message from server");   
             }
         }
     }
+    let _ = quit_tx.send(()).await; // signal to quit other tasks
+  });
     
+  tokio::select! {
+      _ = incoming_handle => (),
+      _ = user_input_handle => (),
+      _ = server_response_handle => (),
+      _ = quit_rx.recv() => {
+       info!("Received quit signal, shutting down...");   
+      }
+  }
+  
     Ok(())
 }
     
     
 
 // Function for handling user input
-async fn handle_user_input(writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>) -> Result<()> {
+async fn handle_user_input(
+    writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>,
+    tx: mpsc::Sender<MessageType>
+) -> Result<()> {
     let stdin = io::stdin();
     let mut stdin_reader = BufReader::new(stdin).lines();
     
     // List of valid commands
-    let valid_commands = [".file", ".image", ".quit"];
+    let valid_commands = [".file", ".image", ".quit", ".login", ".register"];
               
     while let Some(line) = stdin_reader.next_line().await? {
         let input = line.trim().to_string();
         info!("Read input: {}",input);
+        
         // Check if the input is command
         if input.starts_with('.') {
             let command = input.split_whitespace().next().unwrap_or("");
+            
             // Check if command is valid
             if !valid_commands.contains(&command) {
-                eprintln!("Invalid command. Valid commands are: .file <path>, .image <path>, .quit");
+                eprintln!("Invalid command. Valid commands are: .file <path>, .image <path>, .quit, .login <username>, .register <username>");
                 continue;
             }
             
@@ -150,7 +181,30 @@ async fn handle_user_input(writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>) 
                let message = MessageType::Quit;
                send_message(&writer, &message).await?;
                info!("Sent quit message");
+               if let Err(e) = tx.send(message).await {
+                 error!("Failed to send quit message to main loop: {}", e)   
+               }
                break;
+           }
+           ".login" => {
+               if input.len() <= 7 {
+                  eprintln!("Error: .login command requires a username.");
+                  continue;
+               }
+               let username = &input[7..].trim().to_string();
+               let message = MessageType::Login(username.clone());
+               send_message(&writer, &message ).await?;
+               info!("Sent login message for username: {}", username);
+           }
+           ".register" => {
+              if input.len() <= 10 {
+                  eprintln!("Error: .register command requires a username.");
+                  continue;
+              }
+              let username = &input[10..].trim().to_string();
+              let message = MessageType::Register(username.clone());
+              send_message(&writer, &message ).await?;
+              info!("Sent register message for username: {}", username);
            }
            _ => {}
                }  
@@ -167,7 +221,8 @@ async fn handle_user_input(writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>) 
 
 async fn handle_server_response(
     reader: Arc<Mutex<tokio::net::tcp::OwnedReadHalf>>,
-    tx: mpsc::Sender<MessageType>
+    tx: mpsc::Sender<MessageType>,
+    quit_tx: mpsc::Sender<()>
 ) -> Result<()> {
     loop {
         let mut len_bytes = [0u8;4];
@@ -190,14 +245,23 @@ async fn handle_server_response(
         }
         
         let message = deserialize_message(&buffer).map_err(|e| anyhow::anyhow!(e))?;
-        info!("Received message from server: {:?}",message);
+      //  info!("Received message from server: {:?}",message);
+        if let MessageType::Quit = message {
+           if let Err(e) = tx.send(message).await {
+               error!("Failed to send quit message to main loop: {}", e);
+           }
+           let _ = quit_tx.send(()).await;
+           break;   
+        }
         if let Err(e) = tx.send(message).await {
            error!("Failed to send message to main loop: {}",e);
            return Err(e.into());
         }
+        
       }
+      
+      Ok(())
 }
-
 
 
 // Function to send a message to the server
@@ -220,4 +284,5 @@ async fn send_message(
     Ok(())
 }
 
+     
      
