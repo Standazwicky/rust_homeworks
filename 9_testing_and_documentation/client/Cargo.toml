@@ -1,0 +1,12 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+tracing-subscriber = "0.2"
+tracing = "0.1"
+anyhow = "1.0.86"
+thiserror = "1.0.61"
+tokio = { version = "1.38.0", features = ["full"] }

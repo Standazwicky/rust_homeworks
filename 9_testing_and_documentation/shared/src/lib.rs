@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 use serde_cbor;
-use thiserror::Error;
 use tracing::instrument;
+use thiserror::Error;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MessageType {
@@ -12,7 +12,7 @@ pub enum MessageType {
     File(String, Vec<u8>),
     Quit,
     Error(String),
-    Login(String),
+    Login(String),  
     Register(String),
 }
 
@@ -30,12 +30,12 @@ pub fn deserialize_message(data: &[u8]) -> Result<MessageType, DeserializationEr
 
 #[derive(Error, Debug)]
 pub enum SerializationError {
-    #[error("Serialization failed: {0}")]
-    Cbor(#[from] serde_cbor::Error),
+ #[error("Serialization failed: {0}")]
+ Cbor(#[from] serde_cbor::Error),
 }
 
 #[derive(Error, Debug)]
 pub enum DeserializationError {
-    #[error("Deserialization failed: {0}")]
-    Cbor(#[from] serde_cbor::Error),
+ #[error("Deserialization failed: {0}")]
+ Cbor(#[from] serde_cbor::Error),
 }
