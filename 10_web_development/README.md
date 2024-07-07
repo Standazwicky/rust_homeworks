@@ -166,7 +166,7 @@ Reload PostgreSQL configuration:
 
 ## Web Interface
 The server includes a web interface that serves static files from the `static` directory. To access the web interface, open your web browser and navigate to:
-    ```dotenv
+    ```
     http://localhost:8080
     ```
     
