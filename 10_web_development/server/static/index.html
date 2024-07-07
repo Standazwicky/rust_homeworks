@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Messages</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .message { border: 1px solid #ddd; margin: 10px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Chat Messages</h1>
+    <div id="messages"></div>
+
+    <h2>Delete User</h2>
+    <input type="text" id="username" placeholder="Enter username">
+    <button onclick="deleteUser()">Delete</button>
+
+    <script>
+        async function fetchMessages() {
+            const response = await fetch('/messages');
+            const messages = await response.json();
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.content} <em>${msg.timestamp}</em>`;
+                messagesDiv.appendChild(messageDiv);
+            });
+        }
+
+        async function deleteUser() {
+            const username = document.getElementById('username').value;
+            const response = await fetch('/delete_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const result = await response.json();
+            alert(result);
+            fetchMessages();
+        }
+
+        fetchMessages();
+    </script>
+</body>
+</html>
